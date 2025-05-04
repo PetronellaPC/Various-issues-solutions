@@ -1,0 +1,64 @@
+FROM ubuntu:22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IDEA_VERSION=2023.3.5
+
+# Install required tools and Java
+RUN apt-get update && apt-get install -y \
+    wget \
+    openjdk-17-jdk \
+    tar \
+    ca-certificates \
+    && apt-get clean
+
+# Download and extract IntelliJ IDEA
+RUN mkdir -p /opt && \
+    wget -q https://download.jetbrains.com/idea/ideaIC-${IDEA_VERSION}.tar.gz && \
+    tar -xzf ideaIC-${IDEA_VERSION}.tar.gz -C /opt && \
+    rm ideaIC-${IDEA_VERSION}.tar.gz && \
+    ln -s /opt/idea-IC-* /opt/idea
+
+
+FROM ubuntu:22.04
+
+ARG VNC_PASSWORD
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USER=ubuntu
+ENV PASSWORD=${VNC_PASSWORD}
+ENV IDEA_VERSION=2023.3.5
+ENV PATH="$PATH:/opt/idea/bin"
+
+
+RUN useradd -m $USER && echo "$USER:$USER" | chpasswd && adduser $USER sudo
+
+# Install minimal runtime dependencies + i3 window manager
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jdk \
+    tightvncserver \
+    i3 \
+    ca-certificates \
+    libxext6 libxrender1 libxtst6 libfreetype6 libxi6 \
+    && apt-get clean
+
+WORKDIR /home/$USER
+
+# Set up VNC password
+RUN mkdir -p /home/$USER/.vnc && \
+    echo "$PASSWORD" | vncpasswd -f > /home/$USER/.vnc/passwd && \
+    chmod 600 /home/$USER/.vnc/passwd
+
+# Create xstartup script to launch i3 and IntelliJ
+RUN echo '#!/bin/sh\nxrdb $HOME/.Xresources\nstarti3 &\n/opt/idea/bin/idea.sh &' > /home/$USER/.vnc/xstartup && \
+    chmod +x /home/$USER/.vnc/xstartup
+
+# Copy IntelliJ from builder stage
+COPY --from=builder /opt /opt
+
+RUN chown -R $USER:$USER /opt /home/$USER
+
+USER $USER
+
+EXPOSE 5901
+
+# Launch VNC server
+CMD ["sh", "-c", "vncserver :1 -geometry 1280x800 -depth 24 && tail -F /home/ubuntu/.vnc/*.log"]
