@@ -15,8 +15,6 @@ then run the image:
 
 Install a VNC Client on the local machine and connect with `localhost:5901`and the password set in the image build arg.
 
-This is my result:
-<img width="1251" alt="Screenshot 2025-05-04 at 18 06 42" src="https://github.com/user-attachments/assets/54ba1fb5-4ff8-45dd-bd30-dac92db1713c" />
 
 Ideally a volume should also be mapped so that the data/files are persisted on your machine when running the container:
 
