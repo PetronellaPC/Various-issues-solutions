@@ -54,9 +54,11 @@ RUN echo '#!/bin/sh\nxrdb $HOME/.Xresources\nstarti3 &\n/opt/idea/bin/idea.sh &'
 # Copy IntelliJ from builder stage
 COPY --from=builder /opt /opt
 
-RUN chown -R $USER:$USER /opt /home/$USER
+# for openshift
+RUN chgrp -R 0 /opt /home/$USER && \ 
+         chmod -R g=u /opt /home/$USER
+USER 1001
 
-USER $USER
 
 EXPOSE 5901
 
